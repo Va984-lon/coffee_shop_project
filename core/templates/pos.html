@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Касса Кофейни</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; display: flex; height: 100vh; }
+        .menu { flex: 2; padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; align-content: start; overflow-y: auto; }
+        .product { background: white; padding: 15px; border-radius: 8px; text-align: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: 0.2s; }
+        .product:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .product img { max-width: 100%; height: 100px; object-fit: cover; border-radius: 5px; }
+        .product h3 { margin: 10px 0 5px; font-size: 18px; }
+        .product p { color: #6F4E37; font-weight: bold; font-size: 20px; margin: 0; }
+        .cart { flex: 1; background: white; border-left: 2px solid #ddd; padding: 20px; display: flex; flex-direction: column; }
+        .cart-items { flex: 1; overflow-y: auto; }
+        .cart-item { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 10px 0; }
+        .total { font-size: 24px; font-weight: bold; margin: 20px 0; text-align: right; }
+        .btn-pay { background: #6F4E37; color: white; border: none; padding: 15px; font-size: 20px; cursor: pointer; border-radius: 8px; width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="menu">
+        {% for product in products %}
+        <div class="product" onclick="addToCart({{ product.id }}, '{{ product.name }}', {{ product.price }})">
+            {% if product.image %}
+                <img src="{{ product.image.url }}" alt="{{ product.name }}">
+            {% else %}
+                <div style="height: 100px; background: #ddd; display: flex; align-items: center; justify-content: center;">Нет фото</div>
+            {% endif %}
+            <h3>{{ product.name }}</h3>
+            <p>{{ product.price }} ₽</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="cart">
+        <h2>Заказ</h2>
+        <div class="cart-items" id="cart-items"></div>
+        <div class="total" id="total">0 ₽</div>
+        <button class="btn-pay" onclick="checkout()">Оплатить</button>
+    </div>
+
+    <script>
+        let cart = [];
+        let total = 0;
+
+        function addToCart(id, name, price) {
+            let item = cart.find(i => i.id === id);
+            if (item) { item.qty++; } else { cart.push({id, name, price, qty: 1}); }
+            total += price;
+            renderCart();
+        }
+
+        function renderCart() {
+            let container = document.getElementById('cart-items');
+            container.innerHTML = '';
+            cart.forEach(i => {
+                container.innerHTML += `<div class="cart-item"><span>${i.name} x${i.qty}</span> <span>${i.price * i.qty} ₽</span></div>`;
+            });
+            document.getElementById('total').innerText = total + ' ₽';
+        }
+
+        function checkout() {
+            if (cart.length === 0) return alert('Корзина пуста!');
+            fetch('/api/create_order/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+                body: JSON.stringify({cart: cart})
+            }).then(() => { alert('Заказ создан!'); location.reload(); });
+        }
+    </script>
+</body>
+</html>
